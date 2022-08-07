@@ -1,12 +1,19 @@
 Unet Convolutional Neural Network Model for Ship Detection from Satellite Images.
 Dataset taken from Kaggle.
+
 The dataset contains 768x768 images and a CSV file with masks for each ship in the image.
+
 There are multiple masks for each image and images without ships.
+
 The data set is splited into training, validation and test parts.
+
 In training set removed empty rows because this data not useful for training the Model.
+
 In validation and traing sets images without ships wasn't removed.
+
 U-net with Resnet34 encoder was chosen to train the model
 from Segmentation Models Python API.
+
 Input shape images is 256x256, optimazer 'Adam' with 0,0001 lerning rate,
 loss - 'binary_crossentropy', The F-score (Dice coefficient) as metric.
 900 epochs with 100 steps/per epoch (bath size 16).
@@ -20,7 +27,6 @@ airbus_ship_detection_resnet34.ipynb
 preprocessing.py
 model.py
 inference.py
-last_saved_model.h5
 
 How to reproduce results:
 Download dataset from Kaggle using:
