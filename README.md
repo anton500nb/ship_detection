@@ -29,12 +29,19 @@ model.py
 inference.py
 
 How to reproduce results:
+
 Download dataset from Kaggle using:
+
 !pip install kaggle
+
 !mkdir -p ~/.kaggle
+
 !echo '{"username":"input_your_username_here","key":"input_your_key here"}' > ~/.kaggle/kaggle.json
+
 !chmod 600 ~/.kaggle/kaggle.json
+
 !kaggle competitions download -c airbus-ship-detection --force
+
 Put all data from Kaggle to directiory with files.
 
 To train the model run preprpcessing.py then model.py.
