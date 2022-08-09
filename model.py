@@ -1,6 +1,8 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 import cv2
+from sklearn.model_selection import train_test_split
+import albumentations as A
 import tensorflow as tf
 import keras
 import segmentation_models as sm
@@ -13,26 +15,26 @@ from keras.optimizers import adam_v2
 
 # Load data
 
-train_df = pd.read_csv('train_df.csv')
-val_df = pd.read_csv('val_df.csv')
+masks = pd.read_csv('train_ship_segmentations_v2.csv')
+
+# The dataframe has 230k+ rows and 150k NaN values (img without ships)
+# Split data for train:validation:test 70:28:2
+
+train_df = masks[:220000]
+test_df = masks[220000:]
+test_df.reset_index(drop=True, inplace=True)
+train_df = train_df.dropna(axis='index')    # images without ships don't need for train
+train_df, val_df = train_test_split (train_df, test_size=0.3, random_state=42)
+
+
+# Save dataframe for test
+
+pd.DataFrame(test_df).to_csv('test_df.csv', header = True , index = False) 
 print('CSV file loaded')
 
 
 
-# Replace NaN values with empty strings in test dataframe
-# because images without ships will be helpful for validation and tests.
-
-val_df = val_df.fillna('') 
-
-
-
-# Remove the NaN values in train because for the training model it does not need it.
-
-train_df = train_df.dropna(axis = 'index')
-
-
-
-# Function fo decoding lables to masks
+# Function for decoding lables to masks
 
 def rle_decode(mask_rle, shape=(768, 768)):            
     s = mask_rle.split()
@@ -47,64 +49,63 @@ def rle_decode(mask_rle, shape=(768, 768)):
 
 
 
-# Generators for Model training (to reduce memory usage)
+#Function for augmentation images
 
-def img_generator(gen_df, batch_size):                            
+transform = A.Compose([
+    A.ShiftScaleRotate(shift_limit = 0.125, scale_limit=0.2, rotate_limit = 10, p = 0.7, border_mode = cv2.BORDER_CONSTANT),
+    A.RandomCrop(256, 256),
+    A.RandomRotate90(p = .2),
+    A.ElasticTransform(1., p = .2),
+    A.HorizontalFlip(p = .2),
+    A.OneOf([A.RandomCrop(256, 256),
+            A.GaussNoise( ),
+            ], p = 0.3),
+    A.OneOf([  A.RandomCrop(256, 256),
+            A.MotionBlur(p = .4),
+            A.Blur(blur_limit = 3, p = 0.3),
+        ], p = 0.5),
+        A.OneOf([ A.RandomCrop(256, 256),
+            A.OpticalDistortion(p = 0.3),
+            A.GridDistortion(p = 0.1),
+            A.PiecewiseAffine(p = 0.3),
+        ], p = 0.5),
+        A.OneOf([ A.RandomCrop(256, 256),
+            A.CLAHE(clip_limit = 3),
+            A.Sharpen(),
+            A.Emboss(),
+            
+        ], p = 0.4),
+], p = 1)
+
+
+
+# Generators images for Model (to reduce memory usage)
+
+def img_generator(gen_df, batch_size):                      
     while True:
         x_batch = []
         y_batch = []
         
         for i in range(batch_size):
-            img_name, mask_rle = gen_df.sample(1).values[0]      # get row from DF
-            img = cv2.imread('train_v2/'+ img_name)              # read img
+            img_name, mask_rle = gen_df.sample(1).values[0]                                 # get row from DF
+            img = cv2.imread('train_v2/'+ img_name)                                         # read img
             
-
-            img_masks = train_df.loc[train_df['ImageId'] == img_name, 'EncodedPixels'].tolist()
-
-            all_masks = np.zeros((768, 768))                     # find ship masks for more the one ship                   
-            for mask in img_masks:                               # create a single mask for all ships
+            img_masks = masks.loc[masks['ImageId'] == img_name, 'EncodedPixels'].tolist()   # find all ship masks for image with more the one ship                                          
+            all_masks = np.zeros((768, 768))                                                # create a single mask array for all ships
+            for mask in img_masks:
                 all_masks += rle_decode(mask)
             
-
-            img = cv2.resize(img, (256, 256))                    # resize img to 256,256
-            mask = cv2.resize(all_masks, (256, 256))             # resize mask to 256,256
+            transformed = transform(image = img, mask = all_masks)                          # augm. data crop, rotate ect.
+            image_transformed = transformed['image']
+            mask_transformed = transformed['mask']
             
-            
-            x_batch += [img]                                     # put into batch
-            y_batch += [mask]
+            x_batch += [image_transformed]                                                  # put into batch
+            y_batch += [mask_transformed]
 
-        x_batch = np.array(x_batch) / 255.                       # reduce color dimension img
+        x_batch = np.array(x_batch) / 255.                                                  # reduce color dimension img
         y_batch = np.array(y_batch)
 
-        yield x_batch, np.expand_dims(y_batch, -1)               # return batch
-
-
-
-# # Generators for Model testing and evaluation (to reduce memory usage)       
-        
-def img_generator_test(gen_df, batch_size):                      
-    while True:                                                  
-        x_batch = []                                             
-        y_batch = []
-        
-        for i in range(batch_size):
-            img_name, mask_rle = gen_df.sample(1).values[0]      # get row from DF
-            img = cv2.imread('train_v2/'+ img_name)              # read img
-            
-            mask = rle_decode(mask_rle)                          # decode lable to mask
-            
-            img = cv2.resize(img, (256, 256))                    # resize it to 256,256
-            mask = cv2.resize(mask, (256, 256))
-            
-            
-            x_batch += [img]                                     # put into batch
-            y_batch += [mask]
-
-        x_batch = np.array(x_batch) / 255.                       # reduce color dimension img
-        y_batch = np.array(y_batch)
-
-        yield x_batch, np.expand_dims(y_batch, -1)               # return batch
-
+        yield x_batch, np.expand_dims(y_batch, -1)                                          # return batch
 
 
 # Make the Model
@@ -160,7 +161,7 @@ history = model.fit(img_generator(train_df, batch_size),
               epochs = 300,
               verbose = 1,
               callbacks = callbacks,
-              validation_data = img_generator_test(val_df, batch_size),
+              validation_data = img_generator(val_df, batch_size),
               validation_steps = 10,
               class_weight = None,
               max_queue_size = 10,

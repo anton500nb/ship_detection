@@ -1,6 +1,6 @@
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from keras.models import load_model
 import cv2
 import tensorflow as tf
@@ -13,14 +13,21 @@ from segmentation_models.metrics import FScore
 # Load the Model
 
 model = load_model('last_saved_model.h5', custom_objects={'f1-score': sm.metrics.FScore()})
+print ('The Model loaded')
+
+
 
 # Load dataset for test which the Model has not seen
 
 test_df = pd.read_csv('test_df.csv')
 
-# Replace NaN values with empty strings in test dataframe
+
+
+# Replace NaN values with empty strings in test dataframe (need for mask)
 
 test_df = test_df.fillna('') 
+
+
 
 # Decoding mask from dataset function 
 
@@ -33,6 +40,8 @@ def rle_decode(mask_rle, shape=(768, 768)):
     for lo, hi in zip(starts, ends):
         img[lo:hi] = 1
     return img.reshape(shape).T 
+
+
 
 # Generator 'img + mask' for testing 
 
@@ -69,6 +78,7 @@ for x, y in img_generator_test(test_df, 100):
 
 y = np.float32(y)        # to reduce memory using
 pred = model.predict(x)
+
 
 
 # Evaluation the Model
