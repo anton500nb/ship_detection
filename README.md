@@ -1,3 +1,5 @@
+!!!Fixed a bug with early split data, which improved the f-1 score with test data to 0.876.
+
 Unet Convolutional Neural Network Model for Ship Detection from Satellite Images.
 Dataset taken from Kaggle.
 
@@ -18,7 +20,7 @@ Input shape images is 256x256, optimazer 'Adam' with 0,0001 lerning rate,
 loss - 'binary_crossentropy', The F-score (Dice coefficient) as metric.
 900 epochs with 100 steps/per epoch (bath size 16).
 
-For today the best F-score is 0.52.
+For today the best F-score is 0.876.
 The public Kaggle Score is 0.76826.
 For the best result need to apply augmentation.
 
@@ -44,5 +46,5 @@ Download dataset from Kaggle using:
 
 Put all data from Kaggle to directiory with files.
 
-To train the model run preprpcessing.py then model.py.
+To train the model run model.py.
 To check the model on testing datset run inference.py.
