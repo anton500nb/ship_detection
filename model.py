@@ -1,6 +1,7 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 import cv2
+from sklearn.model_selection import train_test_split
 import tensorflow as tf
 import keras
 import segmentation_models as sm
@@ -13,33 +14,29 @@ from keras.optimizers import adam_v2
 
 # Load data
 
-train_df = pd.read_csv('train_df.csv')
-val_df = pd.read_csv('val_df.csv')
+masks = pd.read_csv('train_ship_segmentations_v2.csv')
 print('CSV file loaded')
 
 
 
-# Replace NaN values with empty strings in test dataframe
-# because images without ships will be helpful for validation and tests.
+# Split data to train, validation and test sets (70:28:2)
 
-val_df = val_df.fillna('') 
-
-
-
-# Remove the NaN values in train because for the training model it does not need it.
-
-train_df = train_df.dropna(axis = 'index')
+train_df = masks[:230000]
+test_df = masks[230000:]
+test_df.reset_index(drop = True, inplace = True)
+train_df = train_df.dropna(axis = 'index')       # images without ships don't need for train
+train_df, val_df = train_test_split (train_df, test_size = 0.3, random_state = 42)
 
 
 
 # Function fo decoding lables to masks
 
-def rle_decode(mask_rle, shape=(768, 768)):            
+def rle_decode(mask_rle, shape = (768, 768)):            
     s = mask_rle.split()
     starts, lengths = [np.asarray(x, dtype=int) for x in (s[0:][::2], s[1:][::2])]
     starts -= 1
     ends = starts + lengths
-    img = np.zeros(shape[0]*shape[1], dtype=np.uint8)
+    img = np.zeros(shape[0] * shape[1], dtype = np.uint8)
 
     for lo, hi in zip(starts, ends):
         img[lo:hi] = 1
@@ -59,7 +56,7 @@ def img_generator(gen_df, batch_size):
             img = cv2.imread('train_v2/'+ img_name)              # read img
             
 
-            img_masks = train_df.loc[train_df['ImageId'] == img_name, 'EncodedPixels'].tolist()
+            img_masks = masks.loc[masks['ImageId'] == img_name, 'EncodedPixels'].tolist()
 
             all_masks = np.zeros((768, 768))                     # find ship masks for more the one ship                   
             for mask in img_masks:                               # create a single mask for all ships
@@ -80,36 +77,9 @@ def img_generator(gen_df, batch_size):
 
 
 
-# # Generators for Model testing and evaluation (to reduce memory usage)       
-        
-def img_generator_test(gen_df, batch_size):                      
-    while True:                                                  
-        x_batch = []                                             
-        y_batch = []
-        
-        for i in range(batch_size):
-            img_name, mask_rle = gen_df.sample(1).values[0]      # get row from DF
-            img = cv2.imread('train_v2/'+ img_name)              # read img
-            
-            mask = rle_decode(mask_rle)                          # decode lable to mask
-            
-            img = cv2.resize(img, (256, 256))                    # resize it to 256,256
-            mask = cv2.resize(mask, (256, 256))
-            
-            
-            x_batch += [img]                                     # put into batch
-            y_batch += [mask]
-
-        x_batch = np.array(x_batch) / 255.                       # reduce color dimension img
-        y_batch = np.array(y_batch)
-
-        yield x_batch, np.expand_dims(y_batch, -1)               # return batch
-
-
-
 # Make the Model
 
-model = Unet(backbone_name = 'resnet34',                          # net name
+model = Unet(backbone_name = 'resnet34',                          
              input_shape=(256, 256, 3),
              classes = 1,                                         # to find only one class - mask
              encoder_weights = 'imagenet',
@@ -160,7 +130,7 @@ history = model.fit(img_generator(train_df, batch_size),
               epochs = 300,
               verbose = 1,
               callbacks = callbacks,
-              validation_data = img_generator_test(val_df, batch_size),
+              validation_data = img_generator(val_df, batch_size),
               validation_steps = 10,
               class_weight = None,
               max_queue_size = 10,
@@ -175,5 +145,3 @@ history = model.fit(img_generator(train_df, batch_size),
 
 model.save('last_saved_model.h5')                                    
 print('Training completed successfully and the Model has been saved to a file "last_saved_model.h5"')
-
-
