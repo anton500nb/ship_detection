@@ -21,7 +21,7 @@ loss - 'binary_crossentropy', The F-score (Dice coefficient) as metric.
 900 epochs with 100 steps/per epoch (bath size 16).
 
 For today the best F-score is 0.89.
-The public Kaggle Score is 0.77623.
+The public Kaggle Score is 0.79312.
 For the best result need to apply augmentation.
 
 Main files:
