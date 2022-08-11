@@ -48,3 +48,9 @@ Put all data from Kaggle to directiory with files.
 
 To train the model run model.py.
 To check the model on testing datset run inference.py.
+
+For skipping the Model training, you can download my h5 file here:
+
+https://drive.google.com/file/d/1xiQS-18WpgDycvdNHw1j7ofM995ObnFC/view?usp=sharing
+
+and put it in your dir.
