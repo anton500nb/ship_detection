@@ -31,5 +31,5 @@ For today the best f1-score is 0.75, the Dice-score is 0.52.
 2. put all data from Kaggle to directiory with files;
 3. to train the model run _model.py_;
 4. to check the model on testing datset run _inference.py_;
-5. to skip fit model you can download my .h5 file and put it into your dir:
+5. to skip fit model you can download my _last_saved_model.h5_ file and put it into your dir:
   * https://drive.google.com/file/d/1NyG4S36C4PInhCGfJoV5GVV6eokOHyCP/view?usp=sharing .
