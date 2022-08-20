@@ -13,7 +13,7 @@ In test set images without ships wasn't removed.
 
 Convolutional neural network architecture: 41 layers, four blocks of Maxpooling and Upsampling with four Concatenations. Input shape is 256x256, optimazer 'Adam' with 0,0001 lerning rate, loss - 'binary_crossentropy', The Dice-score and f1-score as metric.
 
-For today the best f1-score is 0.85, the Dice-score is 0.78.
+For today the best f1-score is 0.88, the Dice-score is 0.82.
 
 ### Main files:
 1. airbus_ship_detection_custom_unet.ipynb 
