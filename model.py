@@ -7,7 +7,7 @@ import keras
 from keras.models import Model
 from keras.models import load_model
 from keras.layers import Input, Dense, Concatenate
-from keras.layers import Dense, GlobalAveragePooling2D, Dropout, UpSampling2D, Conv2D, MaxPooling2D, Activation
+from keras.layers import Dense, GlobalAveragePooling2D, Dropout, UpSampling2D, Conv2D, MaxPooling2D, Activation, Dropout
 from keras.optimizers import adam_v2
 from keras import backend as K
 
@@ -201,15 +201,15 @@ conv_up_4_1 = Conv2D(32, (3, 3), padding = 'same')(conc_4)      # reduce filter 
 conv_up_4_1 = Activation('relu')(conv_up_4_1)
 
 conv_up_4_2 = Conv2D(1, (3, 3), padding = 'same')(conv_up_4_1)
+conv_up_4_3 = Dropout(0.5)(conv_up_4_2)                         # avoid overfitting
 
 
 
-result = Activation('sigmoid')(conv_up_4_2)                     # otput layer with sigmoid activation to get probability is a pixel ship
+result = Activation('sigmoid')(conv_up_4_3)                     # otput layer with sigmoid activation to get probability is a pixel ship
 
 
 
 model = Model(inputs = inp, outputs = result)
-
 
 
 best_w = keras.callbacks.ModelCheckpoint('r34_best.h5',           # save best weights during training
